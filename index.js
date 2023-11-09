@@ -2,6 +2,7 @@ const pg = require('pg');
 const client = new pg.Client('postgres://localhost/the_vacation_planner_lives_db');
 const express = require('express');
 const app = express();
+app.use(express.json())
 const path = require('path');
 
 const homePage = path.join(__dirname, 'index.html');
@@ -52,6 +53,30 @@ app.get('/api/vacations', async(req,res,next) => {
   }
 });
 
+app.post('/api/vacations', async(req,res,next) => {
+  try {
+    const SQL = `
+    INSERT INTO vacations(user_id, place_id) VALUES($1, $2) RETURNING *
+    `;
+    const response = await client.query(SQL, [req.body.user_id, req.body.place_id]);
+    res.send(response.rows[0])
+  } catch(ex) {
+    next(ex)
+  }
+});
+
+app.delete('/api/vacations/:id', async(req,res,next) => {
+  try {
+    const SQL = `
+    DELETE FROM vacations WHERE id = $1
+    `;
+    await client.query(SQL, [req.params.id]);
+    res.sendStatus(204);
+  } catch(ex) {
+    next(ex)
+  }
+});
+
 const init = async()=> {
   await client.connect();
   console.log('connected to database');
@@ -73,7 +98,7 @@ const init = async()=> {
       user_id INTEGER REFERENCES users(id) NOT NULL,
       created_at TIMESTAMP DEFAULT now()
     );
-    INSERT INTO users(name) VALUES ('Joe');
+    INSERT INTO users(name) VALUES ('Shelly');
     INSERT INTO users(name) VALUES ('Slater');
     INSERT INTO users(name) VALUES ('Charle');
     INSERT INTO users(name) VALUES ('Andrew');
@@ -83,7 +108,7 @@ const init = async()=> {
     INSERT INTO places(name) VALUES ('UK');
     INSERT INTO places(name) VALUES ('CHILE');
     INSERT INTO vacations(user_id, place_id) VALUES (
-      (SELECT id FROM users WHERE name='Joe'),
+      (SELECT id FROM users WHERE name='Shelly'),
       (SELECT id FROM places WHERE name= 'ICELAND')
     );
   `;

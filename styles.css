@@ -9,3 +9,17 @@ main {
 main > * {
   flex: 1;
 }
+
+form {
+  display: flex;
+  flex-direction: column;
+  border: 2px solid dodgerblue;
+}
+
+form > * {
+  margin: 1rem;
+}
+
+select, button {
+  height: 1.5rem;
+}
