@@ -20,6 +20,6 @@ form > * {
   margin: 1rem;
 }
 
-select, button {
+input, select, button {
   height: 1.5rem;
 }

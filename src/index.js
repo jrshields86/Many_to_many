@@ -1,114 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import axios from 'axios';
-
-const VacationForm = ({ places, users, bookVacation }) => {
-  const [placeId, setPlaceId] = useState('');
-  const [userId, setUserId] = useState('');
-
-  const save = (ev) => {
-    ev.preventDefault();
-    const vacation = {
-      user_id: userId,
-      place_id: placeId
-    };
-    bookVacation(vacation)
-  }
-  return (
-    <form onSubmit={ save }>
-      <select value={ userId } onChange={ ev => setUserId(ev.target.value)}>
-        <option value={''}>-- choose a user --</option>
-        {
-          users.map(user => {
-            return (
-              <option key={ user.id } value={ user.id }>{ user.name }</option>
-            )
-          })
-        }
-      </select>
-      <select value={ placeId } onChange={ ev => setPlaceId(ev.target.value) }>
-        <option value={''}>-- choose a place --</option>
-        {
-          places.map(place => {
-            return (
-              <option key={ place.id} value={ place.id }>{ place.name }</option>
-            )
-          })
-        }
-      </select>
-      <button disabled={ !placeId || !userId }>Create</button>
-    </form>
-  )
-}
-
-const Vacations = ({ vacations, places, cancelVacation }) => {
-  return (
-    <div>
-      <h2>Vacations ({ vacations.length })</h2>
-      <ul>
-        {
-          vacations.map(vacation => {
-            const place = places.find(place => place.id === vacation.place_id)
-            return (
-              <li key={ vacation.id }>
-                { new Date(vacation.created_at).toLocaleString() }
-                <div>
-                  to { place ? place.name : '' }
-                </div>
-                <button onClick={()=> cancelVacation(vacation)}>Cancel</button>             
-              </li>
-            )
-          })
-        }
-      </ul>
-    </div>
-  )
-};
-
-const Users = ({ users, vacations }) => {
-  return (
-    <div>
-      <h2>Users ({ users.length })</h2>
-      <ul>
-        {
-          users.map(user => {
-            return (
-              <li key={ user.id }>
-                { user.name }
-                ({ vacations.filter(vacation => vacation.user_id == user.id).length })
-              </li>
-            )
-          })
-        }
-      </ul>
-    </div>
-  )
-};
-
-const Places = ({ places, vacations }) => {
-  return (
-    <div>
-      <h2>Places ({ places.length })</h2>
-      <ul>
-        {
-          places.map( place => {
-            return(
-              <li key={ place.id }>
-                { place.name }
-                ({ vacations.filter(vacation => vacation.place_id == place.id).length })
-              </li>
-            )
-          })
-        }
-      </ul>
-    </div>
-  )
-};
+import Vacations from './Vacations';
+import VacationForm from './VacationForm';
+import Users from './Users';
+import Places from './Places';
 
 const App = ()=> {
   const [users, setUsers] = useState([]);
   const [places, setPlaces] = useState([]);
   const [vacations, setVacations] = useState([]);
+
+  const dict = vacations.reduce((acc, vacation)=>{
+    acc[vacation.place_id] = acc[vacation.place_id] || 0;
+    acc[vacation.place_id]++;
+    return acc;
+  }, {});
+  const max = Math.max(...Object.values(dict));
+  const entries = Object.entries(dict);
+  const popularIds = entries.filter(entry => entry[1] === max).map(entry => entry[0]*1);
+  const popular = places.filter(place => popularIds.includes(place.id));
+
 
   useEffect(() => {
     const fetchData = async ()=> {
@@ -142,15 +54,32 @@ const App = ()=> {
   const cancelVacation = async (vacation)=> {
     await axios.delete(`/api/vacations/${ vacation.id }`)
     setVacations(vacations.filter(_vacation => _vacation.id !== vacation.id))
-  }
+  };
+
+  const createUser = async(user)=> {
+    const response = await axios.post('/api/users', user);
+    setUsers([...users, response.data])
+  };
   
   return (
     <div>
       <h1>Vacation Planner</h1>
+
+      {
+        popular.length ?
+      (<div>Most popular trips are: {
+        popular.map(place => {
+          return(
+            <span key={place.id}>{ place.name },</span>
+          );
+        })
+      }</div>)
+      : null
+    }
       <VacationForm places={ places } users={ users } bookVacation={ bookVacation }/>
       <main>
-        <Vacations vacations={ vacations } places={ places } cancelVacation={ cancelVacation }/>
-        <Users users={ users } vacations={ vacations }/>
+        <Vacations vacations={ vacations } places={ places } cancelVacation={ cancelVacation } users={ users }/>
+        <Users users={ users } vacations={ vacations } createUser={ createUser }/>
         <Places places={ places } vacations={ vacations }/>
       </main>
     </div>
